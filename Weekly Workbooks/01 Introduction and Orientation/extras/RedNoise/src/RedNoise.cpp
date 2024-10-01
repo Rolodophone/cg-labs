@@ -7,13 +7,22 @@
 #define WIDTH 320
 #define HEIGHT 240
 
+std::vector<float> interpolateSingleFloats(float from, float to, float numberOfValues) {
+	std::vector<float> result;
+	for (size_t i = 0; i < numberOfValues; i++) {
+		result.push_back(from + i*((to-from)/(numberOfValues-1)));
+	}
+	return result;
+}
+
 void draw(DrawingWindow &window) {
 	window.clearPixels();
+	std::vector<float> gradientValues = interpolateSingleFloats(255, 0, WIDTH);
 	for (size_t y = 0; y < window.height; y++) {
 		for (size_t x = 0; x < window.width; x++) {
-			float red = rand() % 256;
-			float green = 0.0;
-			float blue = 0.0;
+			float red = gradientValues[x];
+			float green = gradientValues[x];
+			float blue = gradientValues[x];
 			uint32_t colour = (255 << 24) + (int(red) << 16) + (int(green) << 8) + int(blue);
 			window.setPixelColour(x, y, colour);
 		}
@@ -30,14 +39,6 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 		window.savePPM("output.ppm");
 		window.saveBMP("output.bmp");
 	}
-}
-
-std::vector<float> interpolateSingleFloats(float from, float to, float numberOfValues) {
-	std::vector<float> result;
-	for (int i = 0; i < numberOfValues; i++) {
-		result.push_back(from + i*((to-from)/(numberOfValues-1)));
-	}
-	return result;
 }
 
 int main(int argc, char *argv[]) {

@@ -4,6 +4,8 @@
 #include <fstream>
 #include <vector>
 #include <glm/glm.hpp>
+#include <CanvasPoint.h>
+#include <Colour.h>
 
 #define WIDTH 320
 #define HEIGHT 240
@@ -26,22 +28,33 @@ std::vector<glm::vec3> interpolateThreeElementValues(glm::vec3 from, glm::vec3 t
 	return result;
 }
 
+uint32_t packColour(Colour colour) {
+	return (255 << 24) + (int(colour.red) << 16) + (int(colour.green) << 8) + int(colour.blue);
+}
+
+void drawLine(DrawingWindow &window, CanvasPoint from, CanvasPoint to, Colour colour) {
+	float deltaX = to.x - from.x;
+	float deltaY = to.y - from.y;
+	float numberOfSteps = std::max(abs(deltaX), abs(deltaY));
+	float stepX = deltaX/numberOfSteps;
+	float stepY = deltaY/numberOfSteps;
+	for (float i = 0; i < numberOfSteps; i++) {
+		float x = from.x + i*stepX;
+		float y = from.y + i*stepY;
+		window.setPixelColour(round(x), round(y), packColour(colour));
+	}
+}
+
 void draw(DrawingWindow &window) {
 	window.clearPixels();
-	std::vector<glm::vec3> leftGradient = interpolateThreeElementValues(glm::vec3(255, 0, 0),
-		glm::vec3(255, 255, 0), HEIGHT);
-	std::vector<glm::vec3> rightGradient = interpolateThreeElementValues(glm::vec3(0, 0, 255),
-		glm::vec3(0, 255, 0), HEIGHT);
-	for (size_t y = 0; y < window.height; y++) {
-		std::vector<glm::vec3> rowGradient = interpolateThreeElementValues(leftGradient[y],
-			rightGradient[y], WIDTH);
-		for (size_t x = 0; x < window.width; x++) {
-			glm::vec3 pixelColour = rowGradient[x];
-			uint32_t colour = (255 << 24) + (int(pixelColour[0]) << 16) + (int(pixelColour[1]) << 8) +
-				int(pixelColour[2]);
-			window.setPixelColour(x, y, colour);
-		}
-	}
+	drawLine(window, CanvasPoint(0, 0), CanvasPoint(WIDTH/2, HEIGHT/2),
+		Colour(255, 255, 255));
+	drawLine(window, CanvasPoint(WIDTH/2, HEIGHT/2), CanvasPoint(WIDTH, 0),
+		Colour(255, 255, 255));
+	drawLine(window, CanvasPoint(WIDTH/2, 0), CanvasPoint(WIDTH/2, HEIGHT),
+		Colour(255, 255, 255));
+	drawLine(window, CanvasPoint(WIDTH/3, HEIGHT/2), CanvasPoint(2*WIDTH/3, HEIGHT/2),
+		Colour(255, 255, 255));
 }
 
 void handleEvent(SDL_Event event, DrawingWindow &window) {
@@ -59,16 +72,6 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 int main(int argc, char *argv[]) {
 	DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
 	SDL_Event event;
-
-	std::vector<glm::vec3> result;
-	result = interpolateThreeElementValues(glm::vec3(1.0, 4.0, 9.2),
-		glm::vec3(4.0, 1.0, 9.8), 4);
-	for (size_t i=0; i<result.size(); i++) {
-		for (int j=0; j < 3; j++) {
-			std::cout << result[i][j] << " ";
-		}
-		std::cout << std::endl;
-	}
 
 	while (true) {
 		// We MUST poll for events - otherwise the window will freeze !

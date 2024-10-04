@@ -28,13 +28,17 @@ std::vector<glm::vec3> interpolateThreeElementValues(glm::vec3 from, glm::vec3 t
 
 void draw(DrawingWindow &window) {
 	window.clearPixels();
-	std::vector<float> gradientValues = interpolateSingleFloats(255, 0, WIDTH);
+	std::vector<glm::vec3> leftGradient = interpolateThreeElementValues(glm::vec3(255, 0, 0),
+		glm::vec3(255, 255, 0), HEIGHT);
+	std::vector<glm::vec3> rightGradient = interpolateThreeElementValues(glm::vec3(0, 0, 255),
+		glm::vec3(0, 255, 0), HEIGHT);
 	for (size_t y = 0; y < window.height; y++) {
+		std::vector<glm::vec3> rowGradient = interpolateThreeElementValues(leftGradient[y],
+			rightGradient[y], WIDTH);
 		for (size_t x = 0; x < window.width; x++) {
-			float red = gradientValues[x];
-			float green = gradientValues[x];
-			float blue = gradientValues[x];
-			uint32_t colour = (255 << 24) + (int(red) << 16) + (int(green) << 8) + int(blue);
+			glm::vec3 pixelColour = rowGradient[x];
+			uint32_t colour = (255 << 24) + (int(pixelColour[0]) << 16) + (int(pixelColour[1]) << 8) +
+				int(pixelColour[2]);
 			window.setPixelColour(x, y, colour);
 		}
 	}

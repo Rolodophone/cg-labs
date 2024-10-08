@@ -5,6 +5,7 @@
 #include <vector>
 #include <glm/glm.hpp>
 #include <CanvasPoint.h>
+#include <CanvasTriangle.h>
 #include <Colour.h>
 
 #define WIDTH 320
@@ -45,16 +46,14 @@ void drawLine(DrawingWindow &window, CanvasPoint from, CanvasPoint to, Colour co
 	}
 }
 
+void drawUnfilledTriangle(DrawingWindow &window, CanvasTriangle triangle, Colour colour) {
+	drawLine(window, triangle.vertices[0], triangle.vertices[1], colour);
+	drawLine(window, triangle.vertices[1], triangle.vertices[2], colour);
+	drawLine(window, triangle.vertices[2], triangle.vertices[0], colour);
+}
+
 void draw(DrawingWindow &window) {
-	window.clearPixels();
-	drawLine(window, CanvasPoint(0, 0), CanvasPoint(WIDTH/2, HEIGHT/2),
-		Colour(255, 255, 255));
-	drawLine(window, CanvasPoint(WIDTH/2, HEIGHT/2), CanvasPoint(WIDTH, 0),
-		Colour(255, 255, 255));
-	drawLine(window, CanvasPoint(WIDTH/2, 0), CanvasPoint(WIDTH/2, HEIGHT),
-		Colour(255, 255, 255));
-	drawLine(window, CanvasPoint(WIDTH/3, HEIGHT/2), CanvasPoint(2*WIDTH/3, HEIGHT/2),
-		Colour(255, 255, 255));
+
 }
 
 void handleEvent(SDL_Event event, DrawingWindow &window) {
@@ -63,6 +62,11 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 		else if (event.key.keysym.sym == SDLK_RIGHT) std::cout << "RIGHT" << std::endl;
 		else if (event.key.keysym.sym == SDLK_UP) std::cout << "UP" << std::endl;
 		else if (event.key.keysym.sym == SDLK_DOWN) std::cout << "DOWN" << std::endl;
+		else if (event.key.keysym.sym == SDLK_u) {
+			drawUnfilledTriangle(window, CanvasTriangle(CanvasPoint(rand()%WIDTH, rand()%HEIGHT),
+				CanvasPoint(rand()%WIDTH, rand()%HEIGHT), CanvasPoint(rand()%WIDTH, rand()%HEIGHT)),
+				Colour(rand()%256, rand()%256, rand()%256));
+		}
 	} else if (event.type == SDL_MOUSEBUTTONDOWN) {
 		window.savePPM("output.ppm");
 		window.saveBMP("output.bmp");

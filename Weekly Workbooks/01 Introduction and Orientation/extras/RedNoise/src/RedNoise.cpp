@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <CanvasTriangle.h>
 #include <DrawingWindow.h>
 #include <Utils.h>
@@ -29,6 +30,14 @@ std::vector<glm::vec3> interpolateThreeElementValues(glm::vec3 from, glm::vec3 t
 	return result;
 }
 
+float lerp(float start, float end, float t) {
+	return start + t*(end-start);
+}
+
+CanvasPoint lerp(CanvasPoint start, CanvasPoint end, float t) {
+	return CanvasPoint(lerp(start.x, end.x, t), lerp(start.y, end.y, t));
+}
+
 uint32_t packColour(Colour colour) {
 	return (255 << 24) + (int(colour.red) << 16) + (int(colour.green) << 8) + int(colour.blue);
 }
@@ -52,6 +61,32 @@ void drawUnfilledTriangle(DrawingWindow &window, CanvasTriangle triangle, Colour
 	drawLine(window, triangle.vertices[2], triangle.vertices[0], colour);
 }
 
+void drawFilledTriangle(DrawingWindow &window, CanvasTriangle triangle, Colour colour) {
+	std::sort(triangle.vertices.begin(), triangle.vertices.end(), [](CanvasPoint a, CanvasPoint b) {
+		return a.y < b.y;
+	});
+	CanvasPoint top = triangle.vertices[0];
+	CanvasPoint middle1 = triangle.vertices[1];
+	CanvasPoint bottom = triangle.vertices[2];
+	CanvasPoint middle2 = lerp(top, bottom, (middle1.y-top.y)/(bottom.y-top.y));
+
+	for (float y = top.y; y < middle1.y; y++) {
+		float t = (y-top.y)/(middle1.y-top.y);
+		CanvasPoint a = lerp(top, middle1, t);
+		CanvasPoint b = lerp(top, middle2, t);
+		drawLine(window, a, b, colour);
+	}
+
+	for (float y = middle1.y; y < bottom.y; y++) {
+		float t = (y-middle1.y)/(bottom.y-middle1.y);
+		CanvasPoint a = lerp(middle1, bottom, t);
+		CanvasPoint b = lerp(middle2, bottom, t);
+		drawLine(window, a, b, colour);
+	}
+
+	drawUnfilledTriangle(window, triangle, Colour(255, 255, 255));
+}
+
 void draw(DrawingWindow &window) {
 
 }
@@ -64,6 +99,11 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 		else if (event.key.keysym.sym == SDLK_DOWN) std::cout << "DOWN" << std::endl;
 		else if (event.key.keysym.sym == SDLK_u) {
 			drawUnfilledTriangle(window, CanvasTriangle(CanvasPoint(rand()%WIDTH, rand()%HEIGHT),
+				CanvasPoint(rand()%WIDTH, rand()%HEIGHT), CanvasPoint(rand()%WIDTH, rand()%HEIGHT)),
+				Colour(rand()%256, rand()%256, rand()%256));
+		}
+		else if (event.key.keysym.sym == SDLK_f) {
+			drawFilledTriangle(window, CanvasTriangle(CanvasPoint(rand()%WIDTH, rand()%HEIGHT),
 				CanvasPoint(rand()%WIDTH, rand()%HEIGHT), CanvasPoint(rand()%WIDTH, rand()%HEIGHT)),
 				Colour(rand()%256, rand()%256, rand()%256));
 		}

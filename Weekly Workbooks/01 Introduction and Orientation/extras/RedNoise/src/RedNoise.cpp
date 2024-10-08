@@ -132,7 +132,7 @@ void draw(DrawingWindow &window) {
 	window.clearPixels();
 	drawTexturedTriangle(window,
 		CanvasTriangle(CanvasPoint(160, 10), CanvasPoint(300, 230), CanvasPoint(10, 150)),
-		TextureMap(),  // should be TextureMap("texture.ppm") but that throws an error
+		TextureMap("../texture.ppm"),
 		std::vector<TexturePoint>{TexturePoint(195, 5), TexturePoint(395, 380), TexturePoint(65, 330)});
 }
 

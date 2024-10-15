@@ -92,13 +92,25 @@ void drawFilledTriangle(DrawingWindow &window, CanvasTriangle triangle, Colour c
 
 void drawTexturedTriangle(DrawingWindow &window, CanvasTriangle canvasTriangle, TextureMap textureMap,
 		std::vector<TexturePoint> texturePoints) {
-	printf(std::to_string(texturePoints.size()).c_str());
+
+	// printf("canvasTriangle: ");
+	// std::cout << canvasTriangle << std::endl;
+	// printf("texturePoints: ");
+	// for (TexturePoint texturePoint : texturePoints) {
+	// 	std::cout << "(" << texturePoint << ") ";
+	// }
+	// std::cout << std::endl;
+
+	//store correspondence between canvas and texture points
 	for (int i = 0; i < 3; i++) {
 		canvasTriangle.vertices[i].texturePoint = texturePoints[i];
 	}
+
+	//sort canvas points so that I can identify top, middle1, bottom
 	std::sort(canvasTriangle.vertices.begin(), canvasTriangle.vertices.end(),
 		[](CanvasPoint a, CanvasPoint b) { return a.y < b.y; });
 
+	//identify top, middle1, bottom of triangle and interpolate middle2
 	CanvasPoint top = canvasTriangle.vertices[0];
 	CanvasPoint middle1 = canvasTriangle.vertices[1];
 	CanvasPoint bottom = canvasTriangle.vertices[2];
@@ -106,34 +118,55 @@ void drawTexturedTriangle(DrawingWindow &window, CanvasTriangle canvasTriangle, 
 	CanvasPoint middle2 = lerp(top, bottom, t);
 	middle2.texturePoint = lerp(top.texturePoint, bottom.texturePoint, t);
 
+	// printf("top: ");
+	// std::cout << top << std::endl;
+	// printf("middle1: ");
+	// std::cout << middle1 << std::endl;
+	// printf("middle2: ");
+	// std::cout << middle2 << std::endl;
+	// printf("bottom: ");
+	// std::cout << bottom << std::endl;
+
+	//draw top half of triangle, from y=top.y to y=middle1.y
 	for (float y = top.y; y < middle1.y; y++) {
 		float ty = (y-top.y)/(middle1.y-top.y);
-		CanvasPoint a = lerp(top, middle1, ty);
-		CanvasPoint b = lerp(top, middle2, ty);
-		for (float x = a.x; x < b.x; x++) {
-			float tx = (x-a.x)/(b.x-a.x);
-			TexturePoint texturePoint = lerp(a.texturePoint, b.texturePoint, tx);
+		CanvasPoint a_canvas = lerp(top, middle1, ty);
+		CanvasPoint b_canvas = lerp(top, middle2, ty);
+		TexturePoint a_texture = lerp(top.texturePoint, middle1.texturePoint, ty);
+		TexturePoint b_texture = lerp(top.texturePoint, middle2.texturePoint, ty);
+		for (float x = a_canvas.x; x < b_canvas.x; x++) {
+			float tx = (x-a_canvas.x)/(b_canvas.x-a_canvas.x);
+			TexturePoint texturePoint = lerp(a_texture, b_texture, tx);
 			uint32_t colour = textureMap.pixels[round(texturePoint.x) + round(texturePoint.y)*textureMap.width];
 			window.setPixelColour(round(x), round(y), colour);
 		}
 	}
 
-	// for (float y = middle1.y; y < bottom.y; y++) {
-	// 	float t = (y-middle1.y)/(bottom.y-middle1.y);
-	// 	CanvasPoint a = lerp(middle1, bottom, t);
-	// 	CanvasPoint b = lerp(middle2, bottom, t);
-	// 	//drawLine(window, a, b, colour);
-	// }
+	//draw bottom half of triangle, from y=middle1.y to y=bottom.y
+	for (float y = middle1.y; y < bottom.y; y++) {
+		float ty = (y-middle1.y)/(bottom.y-middle1.y);
+		CanvasPoint a_canvas = lerp(middle1, bottom, ty);
+		CanvasPoint b_canvas = lerp(middle2, bottom, ty);
+		TexturePoint a_texture = lerp(middle1.texturePoint, bottom.texturePoint, ty);
+		TexturePoint b_texture = lerp(middle2.texturePoint, bottom.texturePoint, ty);
+		for (float x = a_canvas.x; x < b_canvas.x; x++) {
+			float tx = (x-a_canvas.x)/(b_canvas.x-a_canvas.x);
+			TexturePoint texturePoint = lerp(a_texture, b_texture, tx);
+			uint32_t colour = textureMap.pixels[round(texturePoint.x) + round(texturePoint.y)*textureMap.width];
+			window.setPixelColour(round(x), round(y), colour);
+		}
+	}
 
+	//draw outline of triangle to check that it is correct
 	drawUnfilledTriangle(window, canvasTriangle, Colour(255, 255, 255));
 }
 
 void draw(DrawingWindow &window) {
 	window.clearPixels();
 	drawTexturedTriangle(window,
-		CanvasTriangle(CanvasPoint(160, 10), CanvasPoint(300, 230), CanvasPoint(10, 150)),
-		TextureMap("../texture.ppm"),
-		std::vector<TexturePoint>{TexturePoint(195, 5), TexturePoint(395, 380), TexturePoint(65, 330)});
+	 	CanvasTriangle(CanvasPoint(160, 10), CanvasPoint(300, 230), CanvasPoint(10, 150)),
+	 	TextureMap("../texture.ppm"),
+	 	std::vector<TexturePoint>{TexturePoint(195, 5), TexturePoint(395, 380), TexturePoint(65, 330)});
 }
 
 void handleEvent(SDL_Event event, DrawingWindow &window) {

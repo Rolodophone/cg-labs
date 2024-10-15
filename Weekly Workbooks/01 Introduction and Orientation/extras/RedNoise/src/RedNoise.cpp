@@ -6,8 +6,8 @@
 #include <vector>
 #include <glm/glm.hpp>
 #include <CanvasPoint.h>
-#include <CanvasTriangle.h>
 #include <Colour.h>
+#include <ModelTriangle.h>
 #include <TextureMap.h>
 
 #define WIDTH 320
@@ -159,6 +159,24 @@ void drawTexturedTriangle(DrawingWindow &window, CanvasTriangle canvasTriangle, 
 
 	//draw outline of triangle to check that it is correct
 	drawUnfilledTriangle(window, canvasTriangle, Colour(255, 255, 255));
+}
+
+void readObjFile(std::string fileName, std::vector<ModelTriangle> &triangles) {
+	std::ifstream file(fileName);
+	std::string line;
+	std::vector<glm::vec3> vertices;
+	while (std::getline(file, line)) {
+		std::vector<std::string> lineSplit = split(line, ' ');
+		if (lineSplit[0] == "v") {
+			vertices.push_back(glm::vec3(lineSplit[1], lineSplit[2], lineSplit[3]));
+		} else if (lineSplit[0] == "f") {
+			triangles.push_back(ModelTriangle(
+				vertices[stoi(lineSplit[1].substr(0, lineSplit[1].length()-1))-1],
+				vertices[stoi(lineSplit[2].substr(0, lineSplit[2].length()-1))-1],
+				vertices[stoi(lineSplit[3].substr(0, lineSplit[3].length()-1))-1],
+				Colour(255, 255, 255)));
+		}
+	}
 }
 
 void draw(DrawingWindow &window) {

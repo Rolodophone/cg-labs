@@ -161,14 +161,14 @@ void drawTexturedTriangle(DrawingWindow &window, CanvasTriangle canvasTriangle, 
 	drawUnfilledTriangle(window, canvasTriangle, Colour(255, 255, 255));
 }
 
-void readObjFile(std::string fileName, std::vector<ModelTriangle> &triangles) {
+void readObjFile(std::string fileName, std::vector<ModelTriangle> &triangles, float scale) {
 	std::ifstream file(fileName);
 	std::string line;
 	std::vector<glm::vec3> vertices;
 	while (std::getline(file, line)) {
 		std::vector<std::string> lineSplit = split(line, ' ');
 		if (lineSplit[0] == "v") {
-			vertices.push_back(glm::vec3(stof(lineSplit[1]), stof(lineSplit[2]), stof(lineSplit[3])));
+			vertices.push_back(glm::vec3(stof(lineSplit[1]), stof(lineSplit[2]), stof(lineSplit[3])) * scale);
 		} else if (lineSplit[0] == "f") {
 			triangles.push_back(ModelTriangle(
 				vertices[stoi(lineSplit[1].substr(0, lineSplit[1].length()-1))-1],
@@ -214,7 +214,7 @@ int main(int argc, char *argv[]) {
 	SDL_Event event;
 
 	std::vector<ModelTriangle> triangles = {};
-	readObjFile("cornell-box.obj", triangles);
+	readObjFile("cornell-box.obj", triangles, 1);
 	std::cout << triangles.size() << std::endl;
 	for (size_t i = 0; i < triangles.size(); i++) {
 		std::cout << triangles[i] << std::endl;

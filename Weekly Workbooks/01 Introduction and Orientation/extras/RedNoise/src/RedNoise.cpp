@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 #include <CanvasPoint.h>
 #include <Colour.h>
+#include <map>
 #include <ModelTriangle.h>
 #include <TextureMap.h>
 
@@ -161,10 +162,12 @@ void drawTexturedTriangle(DrawingWindow &window, CanvasTriangle canvasTriangle, 
 	drawUnfilledTriangle(window, canvasTriangle, Colour(255, 255, 255));
 }
 
-void readObjFile(std::string fileName, std::vector<ModelTriangle> &triangles, float scale) {
+void readObjFile(std::string fileName, std::vector<ModelTriangle> &triangles, float scale,
+		std::map<std::string, Colour> colours) {
 	std::ifstream file(fileName);
 	std::string line;
 	std::vector<glm::vec3> vertices;
+	Colour currentColour;
 	while (std::getline(file, line)) {
 		std::vector<std::string> lineSplit = split(line, ' ');
 		if (lineSplit[0] == "v") {
@@ -174,7 +177,26 @@ void readObjFile(std::string fileName, std::vector<ModelTriangle> &triangles, fl
 				vertices[stoi(lineSplit[1].substr(0, lineSplit[1].length()-1))-1],
 				vertices[stoi(lineSplit[2].substr(0, lineSplit[2].length()-1))-1],
 				vertices[stoi(lineSplit[3].substr(0, lineSplit[3].length()-1))-1],
-				Colour(255, 255, 255)));
+				currentColour));
+		}
+		else if (lineSplit[0] == "usemtl") {
+			currentColour = colours.at(lineSplit[1]);
+		}
+	}
+}
+
+void readMtlFile(std::string fileName, std::map<std::string, Colour> &colours) {
+	std::ifstream file(fileName);
+	std::string line;
+	std::string matName;
+	while (std::getline(file, line)) {
+		std::vector<std::string> lineSplit = split(line, ' ');
+		if (lineSplit[0] == "newmtl") {
+			matName = lineSplit[1];
+		} else if (lineSplit[0] == "Kd") {
+			Colour newColour = Colour(stof(lineSplit[1]), stof(lineSplit[2]), stof(lineSplit[3]));
+			newColour.name = matName;
+			colours.insert({matName, newColour});
 		}
 	}
 }
@@ -213,8 +235,11 @@ int main(int argc, char *argv[]) {
 	DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
 	SDL_Event event;
 
+	std::map<std::string, Colour> colours;
+	readMtlFile("cornell-box.mtl", colours);
+
 	std::vector<ModelTriangle> triangles = {};
-	readObjFile("cornell-box.obj", triangles, 1);
+	readObjFile("cornell-box.obj", triangles, 1, colours);
 	std::cout << triangles.size() << std::endl;
 	for (size_t i = 0; i < triangles.size(); i++) {
 		std::cout << triangles[i] << std::endl;

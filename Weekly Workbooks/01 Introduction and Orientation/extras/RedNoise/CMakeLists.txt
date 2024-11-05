@@ -60,8 +60,8 @@ else ()
         -Wno-unused-variable
         -Wno-ignored-attributes)
 
-    set(DEBUG_OPTIONS -O2 -fno-omit-frame-pointer -g)
-    set(RELEASE_OPTIONS -O3 -march=native -mtune=native)
+    set(DEBUG_OPTIONS -O0 -fno-omit-frame-pointer -g)
+    set(RELEASE_OPTIONS -O0 -march=native -mtune=native)
     target_link_libraries(RedNoise PUBLIC $<$<CONFIG:Debug>:-Wl,-lasan>)
 
 endif()

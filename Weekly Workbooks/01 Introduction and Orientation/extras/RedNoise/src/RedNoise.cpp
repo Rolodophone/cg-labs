@@ -168,7 +168,7 @@ void readObjFile(std::string fileName, std::vector<ModelTriangle> &triangles) {
 	while (std::getline(file, line)) {
 		std::vector<std::string> lineSplit = split(line, ' ');
 		if (lineSplit[0] == "v") {
-			vertices.push_back(glm::vec3(lineSplit[1], lineSplit[2], lineSplit[3]));
+			vertices.push_back(glm::vec3(stof(lineSplit[1]), stof(lineSplit[2]), stof(lineSplit[3])));
 		} else if (lineSplit[0] == "f") {
 			triangles.push_back(ModelTriangle(
 				vertices[stoi(lineSplit[1].substr(0, lineSplit[1].length()-1))-1],
@@ -181,10 +181,10 @@ void readObjFile(std::string fileName, std::vector<ModelTriangle> &triangles) {
 
 void draw(DrawingWindow &window) {
 	window.clearPixels();
-	drawTexturedTriangle(window,
-	 	CanvasTriangle(CanvasPoint(160, 10), CanvasPoint(300, 230), CanvasPoint(10, 150)),
-	 	TextureMap("../texture.ppm"),
-	 	std::vector<TexturePoint>{TexturePoint(195, 5), TexturePoint(395, 380), TexturePoint(65, 330)});
+	// drawTexturedTriangle(window,
+	//  	CanvasTriangle(CanvasPoint(160, 10), CanvasPoint(300, 230), CanvasPoint(10, 150)),
+	//  	TextureMap("../texture.ppm"),
+	//  	std::vector<TexturePoint>{TexturePoint(195, 5), TexturePoint(395, 380), TexturePoint(65, 330)});
 }
 
 void handleEvent(SDL_Event event, DrawingWindow &window) {
@@ -212,6 +212,13 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 int main(int argc, char *argv[]) {
 	DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
 	SDL_Event event;
+
+	std::vector<ModelTriangle> triangles = {};
+	readObjFile("cornell-box.obj", triangles);
+	std::cout << triangles.size() << std::endl;
+	for (size_t i = 0; i < triangles.size(); i++) {
+		std::cout << triangles[i] << std::endl;
+	}
 
 	while (true) {
 		// We MUST poll for events - otherwise the window will freeze !

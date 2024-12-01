@@ -169,6 +169,7 @@ void readObjFile(std::string fileName, std::vector<ModelTriangle> &triangles, fl
 	std::vector<glm::vec3> vertices;
 	Colour currentColour;
 	while (std::getline(file, line)) {
+		printf("getline");
 		std::vector<std::string> lineSplit = split(line, ' ');
 		if (lineSplit[0] == "v") {
 			vertices.push_back(glm::vec3(stof(lineSplit[1]), stof(lineSplit[2]), stof(lineSplit[3])) * scale);
@@ -201,8 +202,18 @@ void readMtlFile(std::string fileName, std::map<std::string, Colour> &colours) {
 	}
 }
 
+CanvasPoint projectVertexOntoCanvasPoint(glm::vec3 cameraPosition, float focalLength, glm::vec3 vertexPosition,
+		float imagePlaneScale) {
+	glm::vec3 vertexWrtCamera = vertexPosition - cameraPosition;
+	float u = focalLength * (vertexWrtCamera.x / vertexWrtCamera.z);
+	float v = focalLength * (vertexWrtCamera.y / vertexWrtCamera.z);
+	u = u*imagePlaneScale + WIDTH/2;
+	v = v*imagePlaneScale + HEIGHT/2;
+	return CanvasPoint(u, v);
+}
+
 void draw(DrawingWindow &window) {
-	window.clearPixels();
+	// window.clearPixels();
 	// drawTexturedTriangle(window,
 	//  	CanvasTriangle(CanvasPoint(160, 10), CanvasPoint(300, 230), CanvasPoint(10, 150)),
 	//  	TextureMap("../texture.ppm"),
@@ -236,13 +247,23 @@ int main(int argc, char *argv[]) {
 	SDL_Event event;
 
 	std::map<std::string, Colour> colours;
-	readMtlFile("cornell-box.mtl", colours);
+	readMtlFile("../cornell-box.mtl", colours);
 
 	std::vector<ModelTriangle> triangles = {};
-	readObjFile("cornell-box.obj", triangles, 1, colours);
+	readObjFile("../cornell-box.obj", triangles, 1, colours);
 	std::cout << triangles.size() << std::endl;
 	for (size_t i = 0; i < triangles.size(); i++) {
+		std::cout << triangles[i].colour << std::endl;
 		std::cout << triangles[i] << std::endl;
+	}
+
+	for (size_t i = 0; i < triangles.size(); i++) {
+		CanvasTriangle canvasTriangle;
+		for (int j = 0; j < 3; j++) {
+			canvasTriangle.vertices[j] = projectVertexOntoCanvasPoint(
+				glm::vec3(0, 0, 4), 2, triangles[i].vertices[j], 30);
+		}
+		drawFilledTriangle(window, canvasTriangle, triangles[i].colour);
 	}
 
 	while (true) {

@@ -14,6 +14,9 @@
 #define WIDTH 320
 #define HEIGHT 240
 
+
+float (*depthBuffer)[320] = new float[HEIGHT][WIDTH];
+
 std::vector<float> interpolateSingleFloats(float from, float to, float numberOfValues) {
 	std::vector<float> result;
 	for (size_t i = 0; i < numberOfValues; i++) {
@@ -36,7 +39,7 @@ float lerp(float start, float end, float t) {
 	return start + t*(end-start);
 }
 CanvasPoint lerp(CanvasPoint start, CanvasPoint end, float t) {
-	return CanvasPoint(lerp(start.x, end.x, t), lerp(start.y, end.y, t));
+	return CanvasPoint(lerp(start.x, end.x, t), lerp(start.y, end.y, t), lerp(start.depth, end.depth, t));;
 }
 TexturePoint lerp(TexturePoint start, TexturePoint end, float t) {
 	return TexturePoint(lerp(start.x, end.x, t), lerp(start.y, end.y, t));
@@ -49,13 +52,21 @@ uint32_t packColour(Colour colour) {
 void drawLine(DrawingWindow &window, CanvasPoint from, CanvasPoint to, Colour colour) {
 	float deltaX = to.x - from.x;
 	float deltaY = to.y - from.y;
+	float deltaDepth = to.depth - from.depth;
 	float numberOfSteps = std::max(abs(deltaX), abs(deltaY));
 	float stepX = deltaX/numberOfSteps;
 	float stepY = deltaY/numberOfSteps;
+	float stepDepth = deltaDepth/numberOfSteps;
 	for (float i = 0; i < numberOfSteps; i++) {
 		float x = from.x + i*stepX;
 		float y = from.y + i*stepY;
-		window.setPixelColour(round(x), round(y), packColour(colour));
+		float depth = from.depth + i*stepDepth;
+		int xInt = round(x);
+		int yInt = round(y);
+		if (1/depth > depthBuffer[yInt][xInt]) {
+			depthBuffer[yInt][xInt] = 1/depth;
+			window.setPixelColour(xInt, yInt, packColour(colour));
+		}
 	}
 }
 
@@ -88,11 +99,13 @@ void drawFilledTriangle(DrawingWindow &window, CanvasTriangle triangle, Colour c
 		drawLine(window, a, b, colour);
 	}
 
-	drawUnfilledTriangle(window, triangle, Colour(255, 255, 255));
+	// drawUnfilledTriangle(window, triangle, Colour(255, 255, 255));
 }
 
 void drawTexturedTriangle(DrawingWindow &window, CanvasTriangle canvasTriangle, TextureMap textureMap,
 		std::vector<TexturePoint> texturePoints) {
+
+	// haven't implemented depth buffer for texture mapping yet
 
 	// printf("canvasTriangle: ");
 	// std::cout << canvasTriangle << std::endl;
@@ -195,7 +208,10 @@ void readMtlFile(std::string fileName, std::map<std::string, Colour> &colours) {
 		if (lineSplit[0] == "newmtl") {
 			matName = lineSplit[1];
 		} else if (lineSplit[0] == "Kd") {
-			Colour newColour = Colour(stof(lineSplit[1]), stof(lineSplit[2]), stof(lineSplit[3]));
+			Colour newColour = Colour(
+				int(stof(lineSplit[1])*255),
+				int(stof(lineSplit[2])*255),
+				int(stof(lineSplit[3])*255));
 			newColour.name = matName;
 			colours.insert({matName, newColour});
 		}
@@ -205,11 +221,13 @@ void readMtlFile(std::string fileName, std::map<std::string, Colour> &colours) {
 CanvasPoint projectVertexOntoCanvasPoint(glm::vec3 cameraPosition, float focalLength, glm::vec3 vertexPosition,
 		float imagePlaneScale) {
 	glm::vec3 vertexWrtCamera = vertexPosition - cameraPosition;
-	float u = focalLength * (vertexWrtCamera.x / vertexWrtCamera.z);
-	float v = focalLength * (vertexWrtCamera.y / vertexWrtCamera.z);
+	// -vertexWrtCamera.z is the depth as z is pointing out of the screen
+	float u = vertexWrtCamera.x * (focalLength / -vertexWrtCamera.z);
+	// negated because the model uses y pointing up, but the canvas uses y pointing down
+	float v = -vertexWrtCamera.y * (focalLength / -vertexWrtCamera.z);
 	u = u*imagePlaneScale + WIDTH/2;
 	v = v*imagePlaneScale + HEIGHT/2;
-	return CanvasPoint(u, v);
+	return CanvasPoint(u, v, -vertexWrtCamera.z);  // store depth (note: this is not z!)
 }
 
 void draw(DrawingWindow &window) {
@@ -246,6 +264,13 @@ int main(int argc, char *argv[]) {
 	DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
 	SDL_Event event;
 
+	// initialise depth buffer
+	for (size_t i = 0; i < WIDTH; i++) {
+		for (size_t j = 0; j < HEIGHT; j++) {
+			depthBuffer[i][j] = 0;
+		}
+	}
+
 	std::map<std::string, Colour> colours;
 	readMtlFile("../cornell-box.mtl", colours);
 
@@ -261,7 +286,7 @@ int main(int argc, char *argv[]) {
 		CanvasTriangle canvasTriangle;
 		for (int j = 0; j < 3; j++) {
 			canvasTriangle.vertices[j] = projectVertexOntoCanvasPoint(
-				glm::vec3(0, 0, 4), 2, triangles[i].vertices[j], 30);
+				glm::vec3(0, 0, 16), 2, triangles[i].vertices[j], 280);
 		}
 		drawFilledTriangle(window, canvasTriangle, triangles[i].colour);
 	}

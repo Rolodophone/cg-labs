@@ -16,6 +16,11 @@
 
 
 float (*depthBuffer)[320] = new float[HEIGHT][WIDTH];
+glm::vec3 cameraPosition = glm::vec3(0, 0, 16);
+glm::mat3 cameraOrientation = glm::mat3();  // right, up, forward - init to identity matrix
+std::map<std::string, Colour> colours;
+std::vector<ModelTriangle> triangles = {};
+
 
 std::vector<float> interpolateSingleFloats(float from, float to, float numberOfValues) {
 	std::vector<float> result;
@@ -218,7 +223,7 @@ void readMtlFile(std::string fileName, std::map<std::string, Colour> &colours) {
 	}
 }
 
-CanvasPoint projectVertexOntoCanvasPoint(glm::vec3 cameraPosition, float focalLength, glm::vec3 vertexPosition,
+CanvasPoint projectVertexOntoCanvasPoint(float focalLength, glm::vec3 vertexPosition,
 		float imagePlaneScale) {
 	glm::vec3 vertexWrtCamera = vertexPosition - cameraPosition;
 	// -vertexWrtCamera.z is the depth as z is pointing out of the screen
@@ -231,7 +236,23 @@ CanvasPoint projectVertexOntoCanvasPoint(glm::vec3 cameraPosition, float focalLe
 }
 
 void draw(DrawingWindow &window) {
-	// window.clearPixels();
+	// initialise depth buffer
+	for (size_t y = 0; y < HEIGHT; y++) {
+		for (size_t x = 0; x < WIDTH; x++) {
+			depthBuffer[y][x] = 0;
+		}
+	}
+
+	window.clearPixels();
+
+	for (size_t i = 0; i < triangles.size(); i++) {
+		CanvasTriangle canvasTriangle;
+		for (int j = 0; j < 3; j++) {
+			canvasTriangle.vertices[j] = projectVertexOntoCanvasPoint(2, triangles[i].vertices[j], 280);
+		}
+		drawFilledTriangle(window, canvasTriangle, triangles[i].colour);
+	}
+
 	// drawTexturedTriangle(window,
 	//  	CanvasTriangle(CanvasPoint(160, 10), CanvasPoint(300, 230), CanvasPoint(10, 150)),
 	//  	TextureMap("../texture.ppm"),
@@ -240,10 +261,30 @@ void draw(DrawingWindow &window) {
 
 void handleEvent(SDL_Event event, DrawingWindow &window) {
 	if (event.type == SDL_KEYDOWN) {
-		if (event.key.keysym.sym == SDLK_LEFT) std::cout << "LEFT" << std::endl;
-		else if (event.key.keysym.sym == SDLK_RIGHT) std::cout << "RIGHT" << std::endl;
-		else if (event.key.keysym.sym == SDLK_UP) std::cout << "UP" << std::endl;
-		else if (event.key.keysym.sym == SDLK_DOWN) std::cout << "DOWN" << std::endl;
+		if (event.key.keysym.sym == SDLK_LEFT) {
+			glm::vec3 left = cameraOrientation * glm::vec3(-1, 0, 0);
+			cameraPosition += left * 0.1f;
+		}
+		else if (event.key.keysym.sym == SDLK_RIGHT) {
+			glm::vec3 right = cameraOrientation * glm::vec3(1, 0, 0);
+			cameraPosition += right * 0.1f;
+		}
+		else if (event.key.keysym.sym == SDLK_UP) {
+			glm::vec3 back = cameraOrientation * glm::vec3(0, 0, -1);
+			cameraPosition += back * 0.1f;
+		}
+		else if (event.key.keysym.sym == SDLK_DOWN) {
+			glm::vec3 forward = cameraOrientation * glm::vec3(0, 0, 1);
+			cameraPosition += forward * 0.1f;
+		}
+		else if (event.key.keysym.sym == SDLK_SPACE) {
+			glm::vec3 up = cameraOrientation * glm::vec3(0, 1, 0);
+			cameraPosition += up * 0.1f;
+		}
+		else if (event.key.keysym.sym == SDLK_LSHIFT) {
+			glm::vec3 down = cameraOrientation * glm::vec3(0, -1, 0);
+			cameraPosition += down * 0.1f;
+		}
 		else if (event.key.keysym.sym == SDLK_u) {
 			drawUnfilledTriangle(window, CanvasTriangle(CanvasPoint(rand()%WIDTH, rand()%HEIGHT),
 				CanvasPoint(rand()%WIDTH, rand()%HEIGHT), CanvasPoint(rand()%WIDTH, rand()%HEIGHT)),
@@ -264,32 +305,14 @@ int main(int argc, char *argv[]) {
 	DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
 	SDL_Event event;
 
-	// initialise depth buffer
-	for (size_t i = 0; i < WIDTH; i++) {
-		for (size_t j = 0; j < HEIGHT; j++) {
-			depthBuffer[i][j] = 0;
-		}
-	}
-
-	std::map<std::string, Colour> colours;
 	readMtlFile("../cornell-box.mtl", colours);
 
-	std::vector<ModelTriangle> triangles = {};
 	readObjFile("../cornell-box.obj", triangles, 1, colours);
-	std::cout << triangles.size() << std::endl;
-	for (size_t i = 0; i < triangles.size(); i++) {
-		std::cout << triangles[i].colour << std::endl;
-		std::cout << triangles[i] << std::endl;
-	}
-
-	for (size_t i = 0; i < triangles.size(); i++) {
-		CanvasTriangle canvasTriangle;
-		for (int j = 0; j < 3; j++) {
-			canvasTriangle.vertices[j] = projectVertexOntoCanvasPoint(
-				glm::vec3(0, 0, 16), 2, triangles[i].vertices[j], 280);
-		}
-		drawFilledTriangle(window, canvasTriangle, triangles[i].colour);
-	}
+	// std::cout << triangles.size() << std::endl;
+	// for (size_t i = 0; i < triangles.size(); i++) {
+	// 	std::cout << triangles[i].colour << std::endl;
+	// 	std::cout << triangles[i] << std::endl;
+	// }
 
 	while (true) {
 		// We MUST poll for events - otherwise the window will freeze !

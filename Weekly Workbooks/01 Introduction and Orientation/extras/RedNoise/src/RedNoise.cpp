@@ -9,6 +9,7 @@
 #include <Colour.h>
 #include <map>
 #include <ModelTriangle.h>
+#include <RayTriangleIntersection.h>
 #include <TextureMap.h>
 
 #define WIDTH 320
@@ -20,6 +21,7 @@ glm::vec3 cameraPosition = glm::vec3(0, 0, 16);
 glm::mat3 cameraOrientation = glm::mat3();  // right, up, forward - init to identity matrix
 std::map<std::string, Colour> colours;
 std::vector<ModelTriangle> triangles = {};
+glm::vec3 lightPosition = glm::vec3(0, 2.6, 0);
 
 
 std::vector<float> interpolateSingleFloats(float from, float to, float numberOfValues) {
@@ -235,7 +237,7 @@ CanvasPoint projectVertexOntoCanvasPoint(float focalLength, glm::vec3 vertexPosi
 	return CanvasPoint(u, v, -vertexWrtCamera.z);  // store depth (note: this is not z!)
 }
 
-void draw(DrawingWindow &window) {
+void drawRasterised(DrawingWindow &window) {
 	// initialise depth buffer
 	for (size_t y = 0; y < HEIGHT; y++) {
 		for (size_t x = 0; x < WIDTH; x++) {
@@ -252,11 +254,63 @@ void draw(DrawingWindow &window) {
 		}
 		drawFilledTriangle(window, canvasTriangle, triangles[i].colour);
 	}
+}
 
-	// drawTexturedTriangle(window,
-	//  	CanvasTriangle(CanvasPoint(160, 10), CanvasPoint(300, 230), CanvasPoint(10, 150)),
-	//  	TextureMap("../texture.ppm"),
-	//  	std::vector<TexturePoint>{TexturePoint(195, 5), TexturePoint(395, 380), TexturePoint(65, 330)});
+RayTriangleIntersection getClosestIntersection(glm::vec3 rayStart, glm::vec3 rayDirection) {
+	int i_closest = -1;
+	float t_closest = FLT_MAX;
+
+	for (int i = 0; i < triangles.size(); i++) {
+		ModelTriangle triangle = triangles[i];
+		glm::vec3 e0 = triangle.vertices[1] - triangle.vertices[0];
+		glm::vec3 e1 = triangle.vertices[2] - triangle.vertices[0];
+		glm::vec3 SPVector = rayStart - triangle.vertices[0];
+		glm::mat3 DEMatrix(-rayDirection, e0, e1);
+		glm::vec3 possibleSolution = inverse(DEMatrix) * SPVector;
+		float t = possibleSolution[0];
+		float u = possibleSolution[1];
+		float v = possibleSolution[2];
+		if (t > 0 && u >= 0 && u <= 1 && v >= 0 && v <= 1 && u + v <= 1 && t > 0.001 && t < t_closest) {
+			i_closest = i;
+			t_closest = t;
+		}
+	}
+
+	if (i_closest == -1) {
+		return RayTriangleIntersection(glm::vec3(), -1, ModelTriangle(), -1);
+	}
+
+	ModelTriangle triangle = triangles[i_closest];
+	glm::vec3 intersectionPoint = cameraPosition + t_closest*rayDirection;
+	return RayTriangleIntersection(intersectionPoint, t_closest, triangle, i_closest);
+}
+
+bool isPointInShadow(glm::vec3 point) {
+	glm::vec3 rayDirection = normalize(lightPosition - point);
+	RayTriangleIntersection intersection = getClosestIntersection(point, rayDirection);
+	return intersection.triangleIndex != -1 && intersection.distanceFromCamera < length(lightPosition - point);
+}
+
+void draw(DrawingWindow &window) {
+	window.clearPixels();
+
+	float focalLength = 2;
+	float imagePlaneScale = 280;
+
+	for (int y = 0; y < HEIGHT; y++) {
+		for (int x = 0; x < WIDTH; x++) {
+			float u = (x - WIDTH/2) / imagePlaneScale;
+			float v = -(y - HEIGHT/2) / imagePlaneScale;
+			glm::vec3 cameraToImagePlanePixel = glm::vec3(u, v, -focalLength);
+			glm::vec3 rayDirection = normalize(cameraToImagePlanePixel * cameraOrientation);
+			RayTriangleIntersection intersection = getClosestIntersection(cameraPosition, rayDirection);
+			if (intersection.triangleIndex != -1) {
+				if (!isPointInShadow(intersection.intersectionPoint)) {
+					window.setPixelColour(x, y, packColour(intersection.intersectedTriangle.colour));
+				}
+			}
+		}
+	}
 }
 
 void handleEvent(SDL_Event event, DrawingWindow &window) {
